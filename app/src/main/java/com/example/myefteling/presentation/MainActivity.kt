@@ -214,7 +214,10 @@ fun TileList(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     items(sortedTiles.size) { index ->
-                        TileItemView(navController, sortedTiles[index], listState, index)
+                        val bottomPadding = if (index == sortedTiles.size - 1) 70.dp else 0.dp
+                        Box(modifier = Modifier.padding(bottom = bottomPadding)) {
+                            TileItemView(navController, sortedTiles[index], listState, index)
+                        }
                     }
                 }
             }
@@ -509,7 +512,6 @@ fun DefaultPreview() {
 /*
 TODO:
  - Add Images
- - Add scrolling animation
  - Improve scrolling
  - Add loading screen
  - Add notification button for when opened
