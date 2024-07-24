@@ -52,6 +52,8 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
+    implementation(libs.coil.compose)
+    implementation(libs.coil.gif)
     implementation(libs.ui.tooling.preview)
     implementation(libs.compose.material)
     implementation(libs.compose.foundation)

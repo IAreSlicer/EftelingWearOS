@@ -65,6 +65,14 @@ import android.os.Vibrator
 import android.os.VibrationEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.combinedClickable
+import coil.compose.rememberImagePainter
+import coil.size.Scale
+import androidx.compose.foundation.Image
+import androidx.compose.runtime.*
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import coil.compose.rememberAsyncImagePainter
+
 
 class MainActivity : ComponentActivity() {
     enum class SortOption {
@@ -122,6 +130,7 @@ fun TileList(navController: NavHostController) {
     var rideMap by remember { mutableStateOf<Map<String, List<TileItem>>>(emptyMap()) }
     val listState = rememberLazyListState()
     var sortOption by remember { mutableStateOf(MainActivity.SortOption.TITLE) }
+    var isLoading by remember { mutableStateOf(true) }
 
     val excludedIds = listOf(8235, 6175, 6154, 6172, 7236, 6362, 6180, 8841) // Example excluded IDs
 
@@ -133,62 +142,80 @@ fun TileList(navController: NavHostController) {
             rideMap = result?.second ?: emptyMap()
         } catch (e: Exception) {
             Log.e("TileList", "Error fetching data", e)
+        } finally {
+            isLoading = false
         }
     }
-
-    val sortedTiles = when (sortOption) {
-        MainActivity.SortOption.TITLE -> tiles.sortedBy { it.label }
-        MainActivity.SortOption.WAIT_TIME -> tiles.sortedBy { it.waitTime }
-    }
-
-    val context = LocalContext.current
-    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-
-
-    Box(
-        modifier = Modifier
-            .background(Color(0xFFede5d5)),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
+    if (isLoading) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFede5d5)),
+            contentAlignment = Alignment.Center
         ) {
-            Button(
-                onClick = {
-                    sortOption =
-                        if (sortOption == MainActivity.SortOption.TITLE) MainActivity.SortOption.WAIT_TIME else MainActivity.SortOption.TITLE
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(0.dp)
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                sortOption =
-                                    if (sortOption == MainActivity.SortOption.TITLE) MainActivity.SortOption.WAIT_TIME else MainActivity.SortOption.TITLE
-                            },
-                            onLongPress = {
-                                vibrator.vibrate(
-                                    VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
-                                )
-                                navController.navigate("sorting_options")
-                            }
-                        )
-                    },
-                colors = ButtonDefaults.buttonColors(
-                    backgroundColor = Color(0xFF70A489) // Set the background color here
-                )
-            ) {
-                Text(text = "Sort by ${if (sortOption == MainActivity.SortOption.TITLE) "Wait Time" else "Title"}")
-            }
+            Image(
+                painter = rememberAsyncImagePainter(model = R.drawable.loading),
+                contentDescription = "Loading"
+            )
+        }
+    } else {
+        val sortedTiles = when (sortOption) {
+            MainActivity.SortOption.TITLE -> tiles.sortedBy { it.label }
+            MainActivity.SortOption.WAIT_TIME -> tiles.sortedBy { it.waitTime }
+        }
 
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+        val context = LocalContext.current
+        val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+
+
+        Box(
+            modifier = Modifier
+                .background(Color(0xFFede5d5)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
             ) {
-                items(sortedTiles.size) { index ->
-                    TileItemView(navController, sortedTiles[index], listState, index)
+                Button(
+                    onClick = {
+                        sortOption =
+                            if (sortOption == MainActivity.SortOption.TITLE) MainActivity.SortOption.WAIT_TIME else MainActivity.SortOption.TITLE
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp)
+                        .pointerInput(Unit) {
+                            detectTapGestures(
+                                onTap = {
+                                    sortOption =
+                                        if (sortOption == MainActivity.SortOption.TITLE) MainActivity.SortOption.WAIT_TIME else MainActivity.SortOption.TITLE
+                                },
+                                onLongPress = {
+                                    vibrator.vibrate(
+                                        VibrationEffect.createOneShot(
+                                            50,
+                                            VibrationEffect.DEFAULT_AMPLITUDE
+                                        )
+                                    )
+                                    navController.navigate("sorting_options")
+                                }
+                            )
+                        },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color(0xFF70A489) // Set the background color here
+                    )
+                ) {
+                    Text(text = "Sort by ${if (sortOption == MainActivity.SortOption.TITLE) "Wait Time" else "Title"}")
+                }
+
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    items(sortedTiles.size) { index ->
+                        TileItemView(navController, sortedTiles[index], listState, index)
+                    }
                 }
             }
         }
@@ -203,9 +230,16 @@ fun TileItemView(
     index: Int
 ) {
     val context = LocalContext.current
+    val density = LocalDensity.current
+
+    // Calculate the offset in pixels
+    val offsetPx = with(density) {
+        listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.offset?.toDp() ?: 0.dp
+    }
+
     Box(
         modifier = Modifier
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = if (offsetPx > 100.dp) {20.dp + (offsetPx-100.dp)/3 } else {if (offsetPx < 0.dp) {20.dp - offsetPx/3} else {20.dp}})
             .height(54.dp)
             .clickable {
                 navController.navigate("detail/${tile.label}")
@@ -239,6 +273,7 @@ fun TileItemView(
         }
     }
 }
+
 
 @Composable
 fun DetailScreen(tileLabel: String) {
@@ -470,3 +505,12 @@ fun DefaultPreview() {
     val navController = rememberNavController()
     WearApp(navController)
 }
+
+/*
+TODO:
+ - Add Images
+ - Add scrolling animation
+ - Improve scrolling
+ - Add loading screen
+ - Add notification button for when opened
+ */
