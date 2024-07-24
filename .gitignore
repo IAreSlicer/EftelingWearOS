@@ -41,6 +41,6 @@ replay_pid*
 local.properties
 
 # Private Information
-app\src\main\res\drawable\face.png
-app\src\main\res\drawable\qr.png
-app\src\main\res\drawable\subscription.png
+face.png
+qr.png
+subscription.png
