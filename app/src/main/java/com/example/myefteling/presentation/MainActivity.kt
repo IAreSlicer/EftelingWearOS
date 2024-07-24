@@ -68,6 +68,7 @@ import androidx.compose.foundation.combinedClickable
 import coil.compose.rememberImagePainter
 import coil.size.Scale
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -283,6 +284,8 @@ fun DetailScreen(tileLabel: String) {
     var waitTime by remember { mutableStateOf(1001) }
     var associatedRides by remember { mutableStateOf<List<TileItem>>(emptyList()) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
     LaunchedEffect(tileLabel) {
         coroutineScope.launch {
@@ -332,6 +335,30 @@ fun DetailScreen(tileLabel: String) {
                     style = MaterialTheme.typography.body1.copy(
                         fontWeight = FontWeight.Bold
                     )
+                )
+            }
+        }
+        if (waitTime == 1000) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(90.dp)
+                    .offset(y = 80.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF70a489))
+                    .clickable {
+                        vibrator.vibrate(
+                            VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
+                        )
+                    },
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.bell),
+                    contentDescription = "Subscription",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
                 )
             }
         }
@@ -512,7 +539,7 @@ fun DefaultPreview() {
 /*
 TODO:
  - Add Images
- - Improve scrolling
  - Add loading screen
+ - Add error screen
  - Add notification button for when opened
  */
