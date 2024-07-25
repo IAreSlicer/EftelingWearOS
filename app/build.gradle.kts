@@ -49,6 +49,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.work.runtime.ktx)
     implementation(libs.play.services.wearable)
     implementation(platform(libs.compose.bom))
     implementation(libs.ui)
@@ -65,6 +66,7 @@ dependencies {
     implementation(libs.ktor.client.cio)
     implementation(libs.ktor.client.serialization)
     implementation(libs.kotlinx)
+    implementation(libs.runtime.livedata)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)

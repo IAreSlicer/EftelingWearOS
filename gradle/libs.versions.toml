@@ -12,9 +12,12 @@ ktor = "2.3.1"
 json = "1.5.0"
 gson = "2.8.8"
 coil = "2.1.0"
+work = "2.7.1"
+runtimeLivedata = "1.6.8"
 
 [libraries]
 
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work"}
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 coil-gif = { group = "io.coil-kt", name = "coil-gif", version.ref = "coil" }
 gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson"}
@@ -34,6 +37,7 @@ ktor-client-core = {group ="io.ktor", name = "ktor-client-core", version.ref = "
 ktor-client-cio = {group ="io.ktor", name = "ktor-client-cio", version.ref = "ktor"}
 ktor-client-serialization = {group ="io.ktor", name = "ktor-client-serialization", version.ref = "ktor"}
 kotlinx = {group ="org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "json"}
+runtime-livedata = { group = "androidx.compose.runtime", name = "runtime-livedata", version.ref = "runtimeLivedata" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

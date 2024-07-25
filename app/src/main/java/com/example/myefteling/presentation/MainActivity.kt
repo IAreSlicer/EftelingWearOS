@@ -81,6 +81,72 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import coil.compose.rememberAsyncImagePainter
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.os.Build
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.core.app.NotificationCompat
+import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkInfo
+import androidx.work.WorkManager
+import androidx.work.WorkerParameters
+import androidx.work.workDataOf
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.util.concurrent.TimeUnit
+
+class FetchRideDataWorker(
+    context: Context,
+    params: WorkerParameters
+) : CoroutineWorker(context, params) {
+
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val rideLabel = inputData.getString("rideLabel") ?: return@withContext Result.failure()
+
+        try {
+            val excludedIds = listOf(8235, 6175, 6154, 6172, 7236, 6362, 6180, 8841)
+            val json = fetchJsonFromUrl()
+            val result = json?.getAllRides(excludedIds)
+            val rides = result?.first ?: emptyList()
+
+            val specificRide = rides.find { it.label == rideLabel }
+            if (specificRide != null && specificRide.waitTime != 1000) {
+                sendNotification("Ride ${specificRide.label} is now open!")
+                WorkManager.getInstance(applicationContext).cancelWorkById(id)
+            }
+
+            Result.success()
+        } catch (e: Exception) {
+            Result.failure()
+        }
+    }
+
+    private fun sendNotification(message: String) {
+        val notificationManager =
+            applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "ride_update_channel"
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Ride Updates",
+                NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(applicationContext, channelId)
+            .setSmallIcon(R.drawable.efteling)
+            .setContentTitle("Ride Update")
+            .setContentText(message)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .build()
+
+        notificationManager.notify(1, notification)
+    }
+}
 
 class MainActivity : ComponentActivity() {
     enum class SortOption {
@@ -406,6 +472,11 @@ fun DetailScreen(tileLabel: String) {
     val context = LocalContext.current
     val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
 
+    val workManager = WorkManager.getInstance(context)
+    val workInfos by workManager.getWorkInfosForUniqueWorkLiveData("FetchRideData_$tileLabel").observeAsState()
+    val isWorkActive = workInfos?.any { it.state == WorkInfo.State.ENQUEUED || it.state == WorkInfo.State.RUNNING  } == true
+
+
     LaunchedEffect(tileLabel) {
         coroutineScope.launch {
             try {
@@ -464,13 +535,26 @@ fun DetailScreen(tileLabel: String) {
                     .padding(90.dp)
                     .offset(y = 80.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF70a489))
+                    //.background(if (isWorkActive) Color.Green else Color.Red)
+                    .background(if (isWorkActive) Color(0xFFb71334) else Color(0xFF70a489))
                     .clickable {
                         vibrator.vibrate(
                             VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
                         )
-                    },
-            ) {
+                        if (isWorkActive) {
+                            workManager.cancelUniqueWork("FetchRideData_$tileLabel")
+                        } else {
+                            val workRequest = PeriodicWorkRequestBuilder<FetchRideDataWorker>(5, TimeUnit.MINUTES)
+                                .setInputData(workDataOf("rideLabel" to tileLabel))
+                                .build()
+                            workManager.enqueueUniquePeriodicWork(
+                                "FetchRideData_$tileLabel",
+                                ExistingPeriodicWorkPolicy.REPLACE,
+                                workRequest
+                            )
+                        }
+                    })
+                    {
                 Image(
                     painter = painterResource(id = R.drawable.bell),
                     contentDescription = "Subscription",
@@ -654,10 +738,3 @@ fun DefaultPreview() {
     val navController = rememberNavController()
     WearApp(navController)
 }
-
-/*
-TODO:
- - Add Images
- - Add error screen
- - Add notification button for when opened
- */
