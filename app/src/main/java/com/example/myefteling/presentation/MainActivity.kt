@@ -63,6 +63,7 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import android.os.Vibrator
 import android.os.VibrationEffect
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -139,6 +140,7 @@ fun TileList(navController: NavHostController) {
     var sortOption by remember { mutableStateOf(MainActivity.SortOption.TITLE) }
     var isLoading by remember { mutableStateOf(true) }
     val infiniteTransition = rememberInfiniteTransition()
+    val isLoadingBaseVisible = remember { mutableStateOf(true) }
     val rotation by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -148,20 +150,40 @@ fun TileList(navController: NavHostController) {
         )
     )
 
+    var currentImage by remember { mutableStateOf(R.drawable.loading_wheel) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(2000) // Delay time for switching images
+            isLoadingBaseVisible.value = !isLoadingBaseVisible.value
+            currentImage = if (currentImage == R.drawable.loading_base) {
+                R.drawable.loading_base
+            } else {
+                R.drawable.loading_error
+            }
+        }
+    }
+
     val excludedIds = listOf(8235, 6175, 6154, 6172, 7236, 6362, 6180, 8841) // Example excluded IDs
+    var isError by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         try {
             val json = fetchJsonFromUrl()
             val result = json?.getAllRides(excludedIds)
-            tiles = result?.first ?: emptyList()
-            rideMap = result?.second ?: emptyMap()
+            if (result != null) {
+                tiles = result.first
+                rideMap = result.second
+            } else {
+                isError = true
+            }
         } catch (e: Exception) {
             Log.e("TileList", "Error fetching data", e)
+            isError = true
         } finally {
             isLoading = false
         }
     }
+
     if (isLoading) {
         Box(
             modifier = Modifier
@@ -171,7 +193,6 @@ fun TileList(navController: NavHostController) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(30.dp)
                     .clip(CircleShape)
             ) {
                 Image(
@@ -192,6 +213,59 @@ fun TileList(navController: NavHostController) {
                             rotationZ = rotation,
                             transformOrigin = TransformOrigin(0.48f, 0.35f)
                         ),
+                    contentScale = ContentScale.Crop
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.loading_cover),
+                    contentDescription = "loading cover",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
+    } else if (isError) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFFede5d5))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            ) {
+                Crossfade(
+                    targetState = isLoadingBaseVisible.value,
+                    animationSpec = tween(durationMillis = 1000) // Duration of the fade animation
+                ) { isBaseVisible ->
+                    if (isBaseVisible) {
+                        Image(
+                            painter = painterResource(id = R.drawable.loading_base),
+                            contentDescription = "loading base",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(24.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.loading_error),
+                            contentDescription = "loading base 2",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(24.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
+                Image(
+                    painter = painterResource(id = R.drawable.loading_wheel),
+                    contentDescription = "loading wheel",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
                     contentScale = ContentScale.Crop
                 )
                 Image(
