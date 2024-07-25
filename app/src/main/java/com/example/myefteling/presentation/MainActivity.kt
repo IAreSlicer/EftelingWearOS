@@ -193,7 +193,7 @@ fun WearApp(navController: NavHostController) {
 
 fun getDrawableIdByName(context: Context, name: String): Int {
     // Try to get the drawable resource ID by its name
-    val resourceId = context.resources.getIdentifier(name, "drawable", context.packageName)
+    val resourceId = context.resources.getIdentifier(name.replace(" ","").replace("&", "en").replace("ñ","n"), "drawable", context.packageName)
     // Return the found resource ID or the default drawable (R.drawable.base) if not found
     return if (resourceId != 0) resourceId else R.drawable.base
 }
