@@ -63,6 +63,11 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import android.os.Vibrator
 import android.os.VibrationEffect
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.combinedClickable
 import coil.compose.rememberImagePainter
@@ -70,6 +75,7 @@ import coil.size.Scale
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import coil.compose.rememberAsyncImagePainter
@@ -132,6 +138,15 @@ fun TileList(navController: NavHostController) {
     val listState = rememberLazyListState()
     var sortOption by remember { mutableStateOf(MainActivity.SortOption.TITLE) }
     var isLoading by remember { mutableStateOf(true) }
+    val infiniteTransition = rememberInfiniteTransition()
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
 
     val excludedIds = listOf(8235, 6175, 6154, 6172, 7236, 6362, 6180, 8841) // Example excluded IDs
 
@@ -151,13 +166,43 @@ fun TileList(navController: NavHostController) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFede5d5)),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = rememberAsyncImagePainter(model = R.drawable.loading),
-                contentDescription = "Loading"
-            )
+                .background(Color(0xFFede5d5))
+        ){
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(30.dp)
+                    .clip(CircleShape)
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.loading_base),
+                    contentDescription = "loading base",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.loading_wheel),
+                    contentDescription = "loading wheel",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp))
+                        .graphicsLayer(
+                            rotationZ = rotation,
+                            transformOrigin = TransformOrigin(0.48f, 0.35f)
+                        ),
+                    contentScale = ContentScale.Crop
+                )
+                Image(
+                    painter = painterResource(id = R.drawable.loading_cover),
+                    contentDescription = "loading cover",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(24.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     } else {
         val sortedTiles = when (sortOption) {
@@ -539,7 +584,6 @@ fun DefaultPreview() {
 /*
 TODO:
  - Add Images
- - Add loading screen
  - Add error screen
  - Add notification button for when opened
  */
