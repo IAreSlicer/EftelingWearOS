@@ -85,6 +85,10 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -425,14 +429,17 @@ fun TileItemView(
     val offsetPx = with(density) {
         listState.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.offset?.toDp() ?: 0.dp
     }
+    var boxWidth by remember { mutableStateOf(0) }
+    val currentPadding = if (offsetPx > 100.dp) {20.dp + (offsetPx-100.dp)/3 } else {if (offsetPx < 0.dp) {20.dp - offsetPx/3} else {20.dp}}
 
     Box(
         modifier = Modifier
-            .padding(horizontal = if (offsetPx > 100.dp) {20.dp + (offsetPx-100.dp)/3 } else {if (offsetPx < 0.dp) {20.dp - offsetPx/3} else {20.dp}})
+            .padding(horizontal = currentPadding)
             .height(54.dp)
             .clickable {
                 navController.navigate("detail/${tile.label}")
             }
+            .onSizeChanged { boxWidth = it.width }
             .clip(RoundedCornerShape(24.dp))
             .background(Color.Transparent),
         contentAlignment = Alignment.Center
@@ -451,13 +458,15 @@ fun TileItemView(
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
+            val fontSize = with(density) { (boxWidth/12).toSp() }
             Text(
-                text = "${tile.label}: ".plus(if (tile.waitTime == 1000) "Gesloten" else if (tile.waitTime == 1001) "Loading..." else "${tile.waitTime} min"),
+                text = "${tile.label}\n".plus(if (tile.waitTime == 1000) "Gesloten" else if (tile.waitTime == 1001) "Loading..." else "${tile.waitTime} min"),
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.body1.copy(
-                    fontWeight = FontWeight.Bold
-                )
+                    fontWeight = FontWeight.Bold,
+                    fontSize = fontSize
+                ),
             )
         }
     }
