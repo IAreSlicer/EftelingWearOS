@@ -85,7 +85,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.os.Build
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
@@ -455,17 +457,19 @@ fun TileItemView(
         Box(
             modifier = Modifier
                 .matchParentSize()
+                .background(if (tile.waitTime < 1000) Color(0x70808080) else Color(0xDD808080))
                 .padding(8.dp),
             contentAlignment = Alignment.Center
         ) {
             val fontSize = with(density) { (boxWidth/12).toSp() }
+
             Text(
                 text = "${tile.label}\n".plus(if (tile.waitTime == 1000) "Gesloten" else if (tile.waitTime == 1001) "Loading..." else "${tile.waitTime} min"),
                 color = Color.White,
                 textAlign = TextAlign.Center,
                 style = MaterialTheme.typography.body1.copy(
                     fontWeight = FontWeight.Bold,
-                    fontSize = fontSize
+                    fontSize = fontSize,
                 ),
             )
         }
