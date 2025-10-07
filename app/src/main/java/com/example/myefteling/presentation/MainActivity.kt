@@ -1,97 +1,79 @@
 package com.example.myefteling.presentation
 
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.Context
-import android.content.res.Resources
+import android.os.Build
 import android.os.Bundle
+import android.os.VibrationEffect
+import android.os.Vibrator
 import android.util.Log
+import android.view.GestureDetector
+import android.view.MotionEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import androidx.wear.compose.material.TimeText
-import com.example.myefteling.R
-import com.example.myefteling.presentation.theme.MyEftelingTheme
-import io.ktor.client.*
-import io.ktor.client.engine.cio.*
-import io.ktor.client.plugins.HttpTimeout
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import kotlinx.coroutines.*
-import kotlinx.serialization.*
-import kotlinx.serialization.json.*
-import kotlin.coroutines.*
-import androidx.core.content.ContextCompat
-import androidx.wear.compose.material.ButtonDefaults
-import androidx.compose.ui.input.pointer.pointerInteropFilter
-import android.view.MotionEvent
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearOutSlowInEasing
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.graphics.graphicsLayer
-import android.os.Vibrator
-import android.os.VibrationEffect
-import androidx.compose.animation.Crossfade
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.foundation.combinedClickable
-import coil.compose.rememberImagePainter
-import coil.size.Scale
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.runtime.*
-import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalDensity
-import coil.compose.rememberAsyncImagePainter
-
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.os.Build
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
@@ -99,9 +81,44 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
+import com.example.myefteling.R
+import com.example.myefteling.presentation.theme.MyEftelingTheme
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.cio.CIO
+import io.ktor.client.plugins.HttpTimeout
+import io.ktor.client.request.get
+import io.ktor.client.statement.HttpResponse
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.HttpStatusCode
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 import java.util.concurrent.TimeUnit
+import kotlin.collections.List
+import kotlin.collections.Map
+import kotlin.collections.MutableList
+import kotlin.collections.any
+import kotlin.collections.emptyList
+import kotlin.collections.emptyMap
+import kotlin.collections.find
+import kotlin.collections.firstOrNull
+import kotlin.collections.forEach
+import kotlin.collections.listOf
+import kotlin.collections.mutableListOf
+import kotlin.collections.mutableMapOf
+import kotlin.collections.none
+import kotlin.collections.set
+import kotlin.collections.sortedBy
+
 
 class FetchRideDataWorker(
     context: Context,
@@ -175,7 +192,6 @@ class MainActivity : ComponentActivity() {
                     composable("detail/{tileLabel}") { backStackEntry ->
                         DetailScreen(backStackEntry.arguments?.getString("tileLabel").toString())
                     }
-                    composable("sorting_options") { SortingOptionsScreen() }
                 }
             }
         }
@@ -557,9 +573,10 @@ fun DetailScreen(tileLabel: String) {
                         if (isWorkActive) {
                             workManager.cancelUniqueWork("FetchRideData_$tileLabel")
                         } else {
-                            val workRequest = PeriodicWorkRequestBuilder<FetchRideDataWorker>(5, TimeUnit.MINUTES)
-                                .setInputData(workDataOf("rideLabel" to tileLabel))
-                                .build()
+                            val workRequest =
+                                PeriodicWorkRequestBuilder<FetchRideDataWorker>(5, TimeUnit.MINUTES)
+                                    .setInputData(workDataOf("rideLabel" to tileLabel))
+                                    .build()
                             workManager.enqueueUniquePeriodicWork(
                                 "FetchRideData_$tileLabel",
                                 ExistingPeriodicWorkPolicy.REPLACE,
@@ -577,80 +594,6 @@ fun DetailScreen(tileLabel: String) {
                     contentScale = ContentScale.Crop
                 )
             }
-        }
-    }
-}
-
-@Composable
-fun SortingOptionsScreen() {
-    var isFlipped by remember { mutableStateOf(false) }
-    val rotation = remember { Animatable(0f) }
-    val context = LocalContext.current
-    val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-
-    LaunchedEffect(isFlipped) {
-        if (isFlipped) {
-            rotation.animateTo(
-                targetValue = 180f,
-                animationSpec = tween(
-                    durationMillis = 1000,
-                    easing = LinearOutSlowInEasing
-                )
-            )
-        } else {
-            rotation.animateTo(
-                targetValue = 0f,
-                animationSpec = tween(
-                    durationMillis = 1000,
-                    easing = LinearOutSlowInEasing
-                )
-            )
-        }
-    }
-
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colors.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.subscription),
-            contentDescription = "Subscription",
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(RoundedCornerShape(24.dp)),
-            contentScale = ContentScale.Crop
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .padding(horizontal = 50.dp)
-                .padding(top = 30.dp)
-                .padding(bottom = 70.dp)
-                .graphicsLayer {
-                    rotationY = rotation.value
-                    cameraDistance = 8 * density
-                }
-                .clickable {
-                    isFlipped = !isFlipped
-                    vibrator.vibrate(
-                        VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE)
-                    )
-                },
-            contentAlignment = Alignment.TopCenter
-        ) {
-            val imageId = if (rotation.value <= 90f) R.drawable.face else R.drawable.qr
-
-            Image(
-                painter = painterResource(id = imageId),
-                contentDescription = "Face",
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(RoundedCornerShape(24.dp)),
-                contentScale = ContentScale.Crop
-            )
         }
     }
 }
